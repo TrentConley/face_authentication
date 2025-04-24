@@ -1,0 +1,1 @@
+gst-launch-1.0 -v v4l2src device=/dev/video0 io-mode=2 ! image/jpeg,width=1280,height=720,framerate=30/1,format=MJPG ! jpegparse ! nvv4l2decoder mjpeg=1 ! nvvidconv ! nvoverlaysink sync=false
