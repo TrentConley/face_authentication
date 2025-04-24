@@ -57,35 +57,45 @@ def prompt_select_device(devices):
 
 def main():
     logging.info("Initializing camera capture application.")
+    # Desired capture settings
+    width, height, fps = 1280, 720, 30
+
     # Detect and select capture device
     devices = list_video_devices()
     selected = prompt_select_device(devices)
     logging.info(f"Selected capture device: {selected}")
-    # Build pipeline
-    pipeline = gstreamer_pipeline(capture_device=selected)
-    logging.info(f"Using GStreamer pipeline: {pipeline}")
 
-    # Open VideoCapture with GStreamer backend
-    logging.debug("Opening VideoCapture with GStreamer backend...")
-    cap = cv2.VideoCapture(pipeline, cv2.CAP_GSTREAMER)
-    if not cap.isOpened():
-        logging.error("Unable to open video source with GStreamer pipeline.")
-        # fallback: try plain /dev/video0
-        logging.debug(f"Attempting fallback to default backend for device {selected}...")
-        cap = cv2.VideoCapture(selected)
-        if not cap.isOpened():
-            logging.error("Also failed to open selected device via default backend.")
-            return
-        else:
-            logging.info("Opened selected device via default backend.")
+    # Build GStreamer pipeline string (used if default fails)
+    pipeline = gstreamer_pipeline(capture_device=selected, width=width, height=height, fps=fps)
+    logging.info(f"Prepared GStreamer pipeline: {pipeline}")
+
+    # Attempt default OpenCV (V4L2) backend first with MJPEG settings
+    logging.debug(f"Attempting default V4L2 backend for device {selected} with MJPG settings...")
+    cap = cv2.VideoCapture(selected)
+    if cap.isOpened():
+        # Force MJPEG and resolution/FPS
+        fourcc = cv2.VideoWriter_fourcc(*'MJPG')
+        cap.set(cv2.CAP_PROP_FOURCC, fourcc)
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+        cap.set(cv2.CAP_PROP_FPS, fps)
+        logging.info("Opened selected device via default V4L2 backend successfully with MJPG.")
+        backend = 'default'
     else:
+        # Fallback to GStreamer
+        logging.warning("Default V4L2 backend failed; trying GStreamer pipeline...")
+        cap = cv2.VideoCapture(pipeline, cv2.CAP_GSTREAMER)
+        if not cap.isOpened():
+            logging.error("Unable to open video source with GStreamer pipeline.")
+            return
         logging.info("Opened video source with GStreamer backend successfully.")
+        backend = 'gstreamer'
 
     # Log actual capture properties
-    width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
-    height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-    fps_prop = cap.get(cv2.CAP_PROP_FPS)
-    logging.info(f"Capture properties - Width: {width}, Height: {height}, FPS: {fps_prop}")
+    cap_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+    cap_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+    cap_fps = cap.get(cv2.CAP_PROP_FPS)
+    logging.info(f"Capture properties ({backend}): Width={cap_width}, Height={cap_height}, FPS={cap_fps}")
 
     win = "USB Camera (press 'q' to quit)"
     cv2.namedWindow(win, cv2.WINDOW_NORMAL)
