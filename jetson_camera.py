@@ -19,16 +19,16 @@ def gstreamer_pipeline(
     fps=30
 ):
     """
-    GStreamer pipeline for USB camera (MJPEG) on Jetson Nano via v4l2src.
+    GStreamer pipeline for USB camera (MJPEG) on Jetson Nano via v4l2src using hardware MJPEG decoding.
     """
     return (
         f"v4l2src device={capture_device} io-mode=2 ! "
         f"image/jpeg, width={width}, height={height}, framerate={fps}/1, format=MJPG ! "
-        "jpegparse ! jpegdec ! "
+        "jpegparse ! nvv4l2decoder mjpeg=1 ! "
         "nvvidconv ! "
         "video/x-raw, format=(string)BGRx ! "
         "videoconvert ! "
-        "video/x-raw, format=(string)BGR ! appsink drop=1"
+        "video/x-raw, format=(string)BGR ! appsink drop=1 sync=false"
     )
 
 def list_video_devices():
