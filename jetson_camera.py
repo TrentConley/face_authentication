@@ -1,24 +1,22 @@
 import cv2
 
 def gstreamer_pipeline(
-    capture_device="/dev/video0",
+    capture_device=0,
     width=1280,
     height=720,
-    fps=30
+    fps=30,
+    flip_method=0
 ):
     """
-    GStreamer pipeline for Jetson Nano hardware MJPEG decoding,
-    converting from NVMM to system memory (BGRx → BGR), with drop=1.
+    GStreamer pipeline for Jetson Nano CSI camera using NVIDIA Argus camera.
     """
     return (
-        f"v4l2src device={capture_device} io-mode=2 ! "
-        f"image/jpeg, width={width}, height={height}, framerate={fps}/1, format=MJPG ! "
-        "jpegparse ! nvv4l2decoder mjpeg=1 ! "
-        "nvvidconv ! "
-        "video/x-raw, format=BGRx ! "
+        f"nvarguscamerasrc ! "
+        f"video/x-raw(memory:NVMM), width=(int){width}, height=(int){height}, framerate=(fraction){fps}/1 ! "
+        f"nvvidconv flip-method={flip_method} ! "
+        "video/x-raw, format=(string)BGRx ! "
         "videoconvert ! "
-        "video/x-raw, format=BGR ! "
-        "appsink drop=1"
+        "video/x-raw, format=(string)BGR ! appsink drop=1"
     )
 
 def main():
