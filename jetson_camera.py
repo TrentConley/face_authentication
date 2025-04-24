@@ -1,19 +1,19 @@
 import cv2
 
 def gstreamer_pipeline(
-    capture_device=0,
+    capture_device="/dev/video0",
     width=1280,
     height=720,
-    fps=30,
-    flip_method=0
+    fps=30
 ):
     """
-    GStreamer pipeline for Jetson Nano CSI camera using NVIDIA Argus camera.
+    GStreamer pipeline for USB camera (MJPEG) on Jetson Nano via v4l2src.
     """
     return (
-        f"nvarguscamerasrc ! "
-        f"video/x-raw(memory:NVMM), width=(int){width}, height=(int){height}, framerate=(fraction){fps}/1 ! "
-        f"nvvidconv flip-method={flip_method} ! "
+        f"v4l2src device={capture_device} io-mode=2 ! "
+        f"image/jpeg, width={width}, height={height}, framerate={fps}/1, format=MJPG ! "
+        "jpegparse ! jpegdec ! "
+        "nvvidconv ! "
         "video/x-raw, format=(string)BGRx ! "
         "videoconvert ! "
         "video/x-raw, format=(string)BGR ! appsink drop=1"
